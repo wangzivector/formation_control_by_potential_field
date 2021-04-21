@@ -40,8 +40,7 @@ for index_t = (0:dt:30)
     [cen,~] = dynamics(zeros(size(cen)), [0 0], cen, dt);
     
     F_r = for_repulsive(pos)
-    f_s = 
-    (cen, R, pos);
+    f_s = for_spherical(cen, R, pos);
     if shape_ind == 3
         shape = [-2 0 2 0;]; % line
     end
