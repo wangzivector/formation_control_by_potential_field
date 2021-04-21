@@ -13,11 +13,11 @@ dt = 0.01;
 max_F = 30;
 a = 3^(0.5);
 change_diff_thred = 0.005;
-target = [2 0;1 a;-1 a;-2 0;-1 -a;1 0.1;1 3;1 0.5]  ;% size(6,2), no use yet
+target = [2 0;1 a;-1 a;-2 0;-1 -a;1 0.1;1 3;1 0.5];% size(6,2), no use yet
 target = target(1:4,:);% num of robots
 
 %initial position
-initial_pos = (target+ randn(size(target))).*0.2 +2 ;
+initial_pos = (target+ randn(size(target))).*0.2 +2;
 pos = initial_pos;
 vel = zeros(size(target));
 
@@ -40,7 +40,8 @@ for index_t = (0:dt:30)
     [cen,~] = dynamics(zeros(size(cen)), [0 0], cen, dt);
     
     F_r = for_repulsive(pos)
-    f_s = for_spherical(cen, R, pos);
+    f_s = 
+    (cen, R, pos);
     if shape_ind == 3
         shape = [-2 0 2 0;]; % line
     end
