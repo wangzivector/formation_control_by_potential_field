@@ -1,0 +1,15 @@
+num_car: 3 # num of cars
+path_name: /path
+car0_odom_name: /car0/odom
+car1_odom_name: /car1/odom
+car2_odom_name: /car2/odom
+
+is_obstacle: false
+show_img: true
+save_img: false
+select_pose: true
+
+dt: 0.01
+max_time: 15
+max_F: 30
+d_dist: 0.05
