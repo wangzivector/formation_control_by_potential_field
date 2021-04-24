@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# 1. ros grid map to set the boundary line and obstacles and then avoid them
+# 2. setup interface with cpp in gridmap and formation
+
 from sys import path_importer_cache
 import numpy as np
 import math
@@ -10,8 +14,6 @@ import matplotlib.pyplot as plt
 import rospy
 from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import PoseStamped
-
-# exit()
 
 
 class Formation_cars:
