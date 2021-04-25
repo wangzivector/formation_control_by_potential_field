@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 
 # 1. ros grid map to set the boundary line and obstacles and then avoid them
-# 2. setup interface with cpp in gridmap and formation
+# 2.<done> setup interface with cpp in sending gridmap and formation
+# 3.<done> receive one formation via interface and give calculation result
 
-from sys import path_importer_cache
 import numpy as np
-import math
 import os
-import yaml
 import sys
 import matplotlib.pyplot as plt
+from numpy.lib.function_base import _interp_dispatcher
+import yaml
 
 import rospy
-from nav_msgs.msg import Odometry, Path
+from nav_msgs.msg import Odometry, Path, OccupancyGrid
 from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import PointCloud
 
 
 class Formation_cars:
@@ -27,11 +28,12 @@ class Formation_cars:
 
         self.update_car = np.tile(False, [self.num_car])
         self.pos_car = np.zeros([self.num_car, 2])
+        self.update_exp_trag = False
         rospy.init_node('formation_node')
 
-        fc = formation(yaml_params)
+        self.fc = formation(yaml_params)
         print('created formation object, initial pose of car:')
-        print(fc.pos)
+        print(self.fc.pos)
         path_name = yaml_params['path_name']
         self.PathPublisher = rospy.Publisher(
             path_name, Path, queue_size=5)  # trag
@@ -40,35 +42,115 @@ class Formation_cars:
         car0_odom_name = yaml_params['car0_odom_name']
         car1_odom_name = yaml_params['car1_odom_name']
         car2_odom_name = yaml_params['car2_odom_name']
+        expect_formation_name = yaml_params['expect_formation_name']
+        gridmap_name = yaml_params['gridmap_name']
         self.car0_odom = rospy.Subscriber(
             car0_odom_name, Odometry, self.callback_car0)
         self.car1_odom = rospy.Subscriber(
             car1_odom_name, Odometry, self.callback_car1)
         self.car2_odom = rospy.Subscriber(
             car2_odom_name, Odometry, self.callback_car2)
+        self.expect_formation = rospy.Subscriber(
+            expect_formation_name, PointCloud, self.callback_expect_formation)
+        self.gridmap_get = rospy.Subscriber(
+            gridmap_name, OccupancyGrid, self.callback_gridmap)
 
         # close loop repeating
         rate = rospy.Rate(5)  # several hz
         while not rospy.is_shutdown():
-            if self.check_update():
-                hello_str = "check success, formation node running ... %s" % rospy.get_time()
-                rospy.loginfo(hello_str)
-                print(self.pos_car)
+
+            # if self.check_update():
+            #     hello_str = "check success, formation node running ... %s" % rospy.get_time()
+            #     rospy.loginfo(hello_str)
+            #     print(self.pos_car)
+            #     for ind_c in range(0, self.num_car):
+            #         fc.pos[ind_c, 0] = self.pos_car[ind_c, 0]
+            #         fc.pos[ind_c, 1] = self.pos_car[ind_c, 1]
+
+            if self.update_exp_trag:
+                print("got trag!")
+                self.fc.shape_in = self.exp_formation
+                print(self.fc.shape_in)
+
                 for ind_c in range(0, self.num_car):
-                    fc.pos[ind_c, 0] = self.pos_car[ind_c, 0]
-                    fc.pos[ind_c, 1] = self.pos_car[ind_c, 1]
+                    self.fc.pos[ind_c, 0] = self.pos_car[ind_c, 0]
+                    self.fc.pos[ind_c, 1] = self.pos_car[ind_c, 1]
+                print(self.fc.pos)
 
-                [t_get, trag_get] = fc.formation_cal()
+                [t_get, trag_get] = self.fc.formation_cal()
                 self.publish_pose(t_get, trag_get)
-                # select_result = fc.selectPose(trag_get)
-                # print(select_result)
-
                 self.update_car = np.tile(False, [self.num_car])
+
+                self.update_exp_trag = False
+
             rate.sleep()
 
     def check_update(self):
         if (self.update_car == True).all():
             return True
+
+    def callback_expect_formation(self, ex_form_msg):
+        lines_size = len(ex_form_msg.channels[0].values)
+        self.exp_formation = np.zeros((lines_size, 4))
+        for ind_e in range(0, lines_size):
+            for ind_p in range(0, 4):
+                self.exp_formation[ind_e][ind_p] = ex_form_msg.channels[ind_p].values[ind_e]
+        self.update_exp_trag = True
+
+    def callback_gridmap(self, gridmap):
+        self.extract_rects(gridmap)
+        self.fc.cen_o = self.cen_l
+        self.fc.rect_o = self.rect_l
+
+    def extract_rects(self, gridmap):
+        m_resolution = gridmap.info.resolution
+        m_width = gridmap.info.width
+        m_height = gridmap.info.height
+        m_gridmap = list()
+        for m_index in range(0, m_width*m_height):
+            if gridmap.data[m_index] == 100:
+                m_gridmap.append(
+                    [int(m_index % m_width), int(m_index / m_width)])
+        # print(m_gridmap)
+
+        # start combining!!!
+        arrange_s = list()
+        while (len(m_gridmap) != 0):
+            arrange_s.append([m_gridmap.pop(0)])
+            m_gridmap_size = 0
+            while m_gridmap_size != len(m_gridmap):
+                m_gridmap_size = len(m_gridmap)
+                for inte_sc in arrange_s[-1]:
+                    flag_mer = False
+                    for inte_p in m_gridmap:
+                        if abs(inte_p[0] - inte_sc[0]) <= 1 and abs(inte_p[1] - inte_sc[1]) <= 1:
+                            arrange_s[-1].append(m_gridmap.pop(m_gridmap.index(inte_p)))
+                            flag_mer = True
+                            break
+                    if flag_mer == True:
+                        break
+            # print(arrange_s)
+
+        # extract rect params
+        cen_list = list()
+        rect_list = list()
+        for inter_ar in arrange_s:
+            x_sort = sorted(inter_ar, key=lambda inter_ar: inter_ar[0])
+            y_sort = sorted(inter_ar, key=lambda inter_ar: inter_ar[1])
+            x_min = x_sort[0][0] * m_resolution
+            x_max = x_sort[-1][0] * m_resolution
+            y_min = y_sort[0][1] * m_resolution
+            y_max = y_sort[-1][1] * m_resolution
+            cen_list.append([(x_min+x_max)/2, (y_min+y_max)/2])
+            rect_list.append([(-x_min+x_max)/2, (-y_min+y_max)/2])
+        self.cen_l = np.array(cen_list)
+        self.rect_l = np.array(rect_list)
+        self.rect_l[self.rect_l <= 0.1] = 0.1
+
+        print('self.cen_l')
+        print(self.cen_l)
+        print('self.rect_l')
+        print(self.rect_l)
 
     def callback_car0(self, Odometry):
         # if Odometry.header.frame_id == '0':
@@ -76,12 +158,10 @@ class Formation_cars:
         self.store_car_pose(ind_car, Odometry)
 
     def callback_car1(self, Odometry):
-        # if Odometry.header.frame_id == '0':
         ind_car = 1
         self.store_car_pose(ind_car, Odometry)
 
     def callback_car2(self, Odometry):
-        # if Odometry.header.frame_id == '0':
         ind_car = 2
         self.store_car_pose(ind_car, Odometry)
 
@@ -116,28 +196,37 @@ class formation:
         self.dt = yaml_params['dt']
         self.max_time = yaml_params['max_time']
         self.max_F = yaml_params['max_F']
-        self.a = math.sqrt(3)
         # self.change_diff_thred = 0.005
 
         # robot position
         self.num_robot = yaml_params['num_car']  # num of robots
-        self.target = np.array([[2., 0.], [1., self.a], [-1., self.a],
-                                [-1., -self.a], [1., 0.1], [1., 3.]])  # no use, just for initial robot pos
-        self.target = self.target[0:self.num_robot]
+        # no use, just for initial robot pos
+        self.initpos = np.array([[1., 1.], [1., 1.5], [1., 2.0],
+                                [2., 1.], [2., 1.5], [2., 2.]])
+        self.initpos = self.initpos[0: self.num_robot]
 
         # initial position
-        self.initial_pos = (
-            self.target*0.2 + np.random.random_sample(np.shape(self.target))) + 2
-        self.pos = self.initial_pos
-        self.vel = np.zeros(np.shape(self.target))
+        # self.initial_pos = (
+        #     self.initpos + np.random.random_sample(np.shape(self.initpos))) + 1
+        self.pos = self.initpos
+        self.vel = np.zeros(np.shape(self.pos))
 
         # obstacle info.
         self.bool_obstacle = yaml_params['is_obstacle']
-        self.cen_o = np.array([[0., 2.]])
-        self.rect_o = np.array([[0.5, 0.8]])
+        # you can initial obstacle in yaml file, but you shouldnt
+        self.cen_o = np.array([[]])
+        self.rect_o = np.array([[]])
 
         # initial values
         self.d_dist = yaml_params['d_dist']  # m
+        self.M_m = yaml_params['M_m']  # car dynamics
+        self.D_d = yaml_params['D_d']
+        self.k_k = yaml_params['k_k']
+
+        # algorithm params
+        self.kr = yaml_params['kr']
+        self.ks = yaml_params['ks']
+        self.ko = yaml_params['ko']
 
         # self.F_last_last = 0.1
         # self.F_last = 0.2
@@ -150,12 +239,13 @@ class formation:
         self.show_img = yaml_params['show_img']
         self.save_img = yaml_params['save_img']
         self.select_pose = yaml_params['select_pose']
+        self.shape_in = np.array([])
 
     def refresh_params(self):
         # obstacle info.
-        self.bool_obstacle = True
-        self.cen_o = np.array([[0., 2.]])
-        self.rect_o = np.array([[0.5, 0.8]])
+        # self.bool_obstacle = True
+        # self.cen_o = np.array([[]])
+        # self.rect_o = np.array([[]])
         self.pos_size = self.pos.shape[0]
         self.cen_vl = np.array([0., 0.])  # tragetary of virtual leader
         self.shape_ind = 0
@@ -163,11 +253,7 @@ class formation:
             x*self.dt for x in range(0, int((self.max_time-0)/self.dt))]
 
     def dynamics_d(self, F_f, vel, pos, dt):
-        M_m = 1
-        D_d = 1
-        k_k = 9
-        P_v = D_d + k_k
-
+        P_v = self.D_d + self.k_k
         dd = 10
         ddt = dt / dd
         pos_f = np.zeros(np.shape(pos))
@@ -177,7 +263,7 @@ class formation:
             vel_i = np.tile(vel[index, :], (dd, 1))
             pos_i = np.tile(pos[index, :], (dd, 1))
             for i in range(1, dd):
-                acc_i[i, :] = (F_f[index, :] - P_v*vel_i[i, :])/M_m
+                acc_i[i, :] = (F_f[index, :] - P_v*vel_i[i, :])/self.M_m
                 vel_i[i, :] = vel_i[i-1, :] + acc_i[i-1, :]*ddt
                 pos_i[i, :] = pos_i[i-1, :] + vel_i[i-1, :] * \
                     ddt + acc_i[i-1, :]*(0.5*(ddt**2))
@@ -194,9 +280,8 @@ class formation:
 
     def for_repulsive(self, pos_in):
         dim = pos_in.shape[0]
-        quantity = np.ones((1, dim))*4 + np.arange(0., dim).transpose() * 0.5
+        quantity = np.ones((1, dim))*self.kr + np.arange(0., dim).transpose() * 0.5
         quantity_sq = np.matmul(quantity.T, quantity)
-        kr = 1
         distance_sq = np.zeros((dim, dim))
         for index in range(0, dim):
             distance_sq[index, :] = np.sum(
@@ -221,22 +306,20 @@ class formation:
 
         pos_x_cos[np.isnan(pos_x_cos)] = 0
         pos_y_sin[np.isnan(pos_y_sin)] = 0
-        f_n_x = kr*quantity_sq*distance_sq_inv*pos_x_cos
-        f_n_y = kr*quantity_sq*distance_sq_inv*pos_y_sin
+        f_n_x = self.kr*quantity_sq*distance_sq_inv*pos_x_cos
+        f_n_y = self.kr*quantity_sq*distance_sq_inv*pos_y_sin
         F_n = np.array([np.sum(f_n_x, 1), np.sum(f_n_y, 1)]).T
         return F_n
 
     def for_spherical(self, cen_s, R_s, pos):
-        ks = 50
         diff_p_c = pos - np.tile(cen_s, [pos.shape[0], 1])
         sum_p_c = self.row_T(np.sum(diff_p_c**2, 1))
         diff_sq = sum_p_c - np.ones(sum_p_c.shape)*(R_s**2)
-        f_n = diff_p_c*(np.tile(diff_sq, [1, 2])*(-ks))
+        f_n = diff_p_c*(np.tile(diff_sq, [1, 2])*(-self.ks))
         return f_n
 
     def for_shape(self, pos_in, tar_shape):
         # print(pos_in,tar_shape)
-        ks = 100
         f_n = np.zeros(np.shape(pos_in))
         for index_pos in range(0, pos_in.shape[0]):
             pos_i = pos_in[index_pos, :]
@@ -264,7 +347,7 @@ class formation:
             ind = np.argmin(self.norm_row(result_pp))
             vec_i = result_pp[ind, :]
             min_v = np.linalg.norm(vec_i, 2)
-            f_i = ks * min_v * vec_i
+            f_i = self.ks * min_v * vec_i
             f_n[index_pos, :] = f_i
             # print(result_p_a1)
         return f_n
@@ -274,6 +357,11 @@ class formation:
         barrier = 3  # or add threshold.
 
         F_o = np.zeros(np.shape(pos))
+        # print(cen_o.shape[1])
+        if cen_o.shape[1] == 0:
+            print("no obstacle!!")
+            return F_o
+
         for index_o in range(0, cen_o.shape[0]):
             x0 = cen_o[index_o, 0]
             y0 = cen_o[index_o, 1]
@@ -310,27 +398,29 @@ class formation:
             factors = factors * \
                 np.tile(bool_sm, [1, 2]) + factors_norm_max * \
                 np.tile(bool_bi, [1, 2])
-            print(factors)
-            F_o_i = dir*np.tile(vel_norm, [1, 2])*factors
+
+            F_o_i = dir * np.tile(vel_norm, [1, 2]) * factors * self.ko
+            print('F_o_i')
+            print(F_o_i)
             F_o = F_o + F_o_i
             # you can cosider sum them up or just choose the biggest one.
         return F_o
 
     def formation_shape(self, sha_ind):
         if sha_ind == 0:
-            shape_ind = np.array([[-1, 0, 1, 0], [-1, 0, 0, -1.5],
-                                  [0, -1.5, 1, 0]])  # triangle
+            shape_i = np.array([[-1, 0, 1, 0], [-1, 0, 0, -1.5],
+                                [0, -1.5, 1, 0]])  # triangle
         if sha_ind == 3:
-            shape_ind = np.array([[0, 0, 0, 1], [0, 0, 1, -1.5],
-                                  [0, 0, -1, -1.5]])  # person
+            shape_i = np.array([[0, 0, 0, 1], [0, 0, 1, -1.5],
+                                [0, 0, -1, -1.5]])  # person
         if sha_ind == 2:
-            shape_ind = np.array([[-1, 0, 1, 0], [-1, -2, 1, -2],
-                                  [-1, -2, -1, 0], [1, -2, 1, 0]])  # square
+            shape_i = np.array([[-1, 0, 1, 0], [-1, -2, 1, -2],
+                                [-1, -2, -1, 0], [1, -2, 1, 0]])  # square
         if sha_ind == 1:
-            shape_ind = np.array([[-2, 0, 2, 0]])  # line
+            shape_i = np.array([[-2, 0, 2, 0]])  # line
         if sha_ind == 4:
-            shape_ind = np.array([])  # none
-        return shape_ind
+            shape_i = np.array([])  # none
+        return shape_i
 
     def selectPose(self, trag_get):
 
@@ -365,11 +455,16 @@ class formation:
             plt.plot(pos_i[:, 0], pos_i[:, 1], '-^')
 
         if self.bool_obstacle:
-            for index_o in range(0,):
-                x0 = self.cen_o(index_o, 1)
-                y0 = self.cen_o(index_o, 2)
-                v1 = self.rect_o(index_o, 1)
-                v2 = self.rect_o(index_o, 2)
+            if self.cen_o.shape[1] == 0:
+                print("no obstacle!!")
+                return
+            for index_o in range(0, self.cen_o.shape[0]):
+                x0 = self.cen_o[index_o, 0]
+                y0 = self.cen_o[index_o, 1]
+                v1 = self.rect_o[index_o, 0]
+                v2 = self.rect_o[index_o, 1]
+                plt.plot([x0 - v1, x0 - v1, x0 + v1, x0 + v1, x0 - v1],
+                         [y0 - v2, y0 + v2, y0 + v2, y0 - v2, y0 - v2], '-.s')
             # plot obstacle here
 
         # plt.pause(0.001)
@@ -381,6 +476,7 @@ class formation:
         pos_save = np.zeros((0, self.pos_size, 2))
         pos_save_for = np.zeros((0, self.pos_size, 2))
         vel_save = np.zeros((0, self.pos_size, 2))
+
         for index_t in self.time_stamp:
             print('index_t')
             print(index_t)
@@ -390,9 +486,8 @@ class formation:
             F_r = self.for_repulsive(self.pos)
 
             # f_s = for_spherical(cen_vl, R_s, pos) # circle formation
-
-            shape_in = self.formation_shape(self.shape_ind)  # custom formation
-            f_s = self.for_shape(self.pos, shape_in)
+            # shape_in = self.formation_shape(self.shape_ind)  # custom formation
+            f_s = self.for_shape(self.pos, self.shape_in)
 
             # print(F_r)
             # print(f_s)
@@ -455,7 +550,7 @@ class formation:
 
             # plot the result in matplot
             # self.formation_plot( pos_save, pos_save_for)
-            if self.shape_ind == 2 or index_t == self.time_stamp[-1]:
+            if self.shape_ind == 1 or index_t == self.time_stamp[-1]:
                 if self.select_pose:
                     [t, pos_save] = self.selectPose(pos_save)
                     # print(t)
@@ -471,7 +566,7 @@ class formation:
 
                         plt.savefig('./tra_output/image' + str(np.random.randint(1,
                                     1000, [1], dtype=np.uint32)[0]) + '.png')
-                    plt.pause(0.5)
+                    plt.pause(2.5)
                     plt.clf()
                     plt.close()
                 self.refresh_params()
