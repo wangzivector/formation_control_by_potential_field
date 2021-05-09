@@ -1,9 +1,10 @@
 # topics params
-num_car: 3 # num of cars
+num_car: 4 # num of cars
 path_name: /path
 car0_odom_name: /car0/odom
 car1_odom_name: /car1/odom
 car2_odom_name: /car2/odom
+car3_odom_name: /car3/odom
 expect_formation_name: /expect_formation
 gridmap_name: /gridmap
 
@@ -15,7 +16,7 @@ select_pose: true
 
 # global params
 dt: 0.01
-max_time: 15
+max_time: 30
 max_F: 30
 d_dist: 0.05
 

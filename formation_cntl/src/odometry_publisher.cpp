@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
   ros::Publisher odom_pub0 = n.advertise<nav_msgs::Odometry>("/car0/odom", 50);
   ros::Publisher odom_pub1 = n.advertise<nav_msgs::Odometry>("/car1/odom", 50);
   ros::Publisher odom_pub2 = n.advertise<nav_msgs::Odometry>("/car2/odom", 50);
+  ros::Publisher odom_pub3 = n.advertise<nav_msgs::Odometry>("/car3/odom", 50);
 
   ros::Publisher grid_pub =
       n.advertise<nav_msgs::OccupancyGrid>("/gridmap", 10);
@@ -36,12 +37,12 @@ int main(int argc, char **argv) {
   int index_c = 0;
   ros::Rate r(1);
   while (n.ok()) {
-    index_c += 1;           // for pub rate control
-                            /*
-                                -- A --
-                                this part is for odometry test
-                                publish three cars odometry for test
-                            */
+    index_c += 1;
+    /*
+        -- A --
+        this part is for odometry test
+        publish three cars odometry for test
+    */
     if (index_c % 2 == 0) { // for pub rate control
 
       ros::spinOnce(); // check for incoming messages
@@ -68,7 +69,7 @@ int main(int argc, char **argv) {
 
       // publish the message
       odo_index = random(10);
-      switch (odo_index % 3) {
+      switch (odo_index % 4) {
       case 0:
         odom.pose.pose.position.x = x + 0.4 * random(8); // just random set
         odom.pose.pose.position.y =
@@ -85,8 +86,13 @@ int main(int argc, char **argv) {
         odom.pose.pose.position.y = y + 0.1 * random(8);
         odom_pub2.publish(odom);
         break;
+      case 3:
+        odom.pose.pose.position.x = x + 0.5 * random(7);
+        odom.pose.pose.position.y = y + 0.1 * random(6);
+        odom_pub3.publish(odom);
+        break;
       }
-      std::cout << "publishing odometry info: " << odo_index % 3 << std::endl;
+      std::cout << "publishing odometry info: " << odo_index % 4 << std::endl;
     }
     /*
         -- B --
@@ -106,7 +112,8 @@ int main(int argc, char **argv) {
                                               {2.8, 3, 3.9, 4.4}};
       // int obstacle_num = 1;
       // float obstacle_list[obstacle_num][4] = {{1, 1, 1.2, 1.4}};
-      // std::cout << int((obstacle_list[0][1] + 0.5*m_resolution) / m_resolution) << std::endl;
+      // std::cout << int((obstacle_list[0][1] + 0.5*m_resolution) /
+      // m_resolution) << std::endl;
 
       nav_msgs::OccupancyGrid gridmap;
       gridmap.header.frame_id = "map";
@@ -168,8 +175,7 @@ int main(int argc, char **argv) {
 
       std::vector<signed char> a(
           p,
-          p +
-              gridmap.info.width *
+          p + gridmap.info.width *
                   gridmap.info.height); // remap to vector::char
       gridmap.data = a;
       grid_pub.publish(gridmap);
@@ -200,8 +206,8 @@ int main(int argc, char **argv) {
 
       // formation type : formation_x[num_line][x_y_index]
       // here is your difinition of formation
-      float formation[1][4] = {{1, 2, 4, 2}}; // line
-      int num_lines = 1;
+      int num_lines = 4;
+      float formation[num_lines][4] = {{1, 2, 4, 2},{1, 2, 1, 4},{1, 4, 4, 4},{4, 4, 4, 2}}; // line
 
       // float formation[3][4] = {
       //     {2, 3, 4, 3}, {2, 3, 3, 1.5}, {3, 1.5, 4, 3}}; // triangle

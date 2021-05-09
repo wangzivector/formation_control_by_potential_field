@@ -32,8 +32,8 @@ class Formation_cars:
         rospy.init_node('formation_node')
 
         self.fc = formation(yaml_params)
-        print('created formation object, initial pose of car:')
-        print(self.fc.pos)
+        # print('created formation object, initial pose of car:')
+        # print(self.fc.pos)
         path_name = yaml_params['path_name']
         self.PathPublisher = rospy.Publisher(
             path_name, Path, queue_size=5)  # trag
@@ -42,6 +42,7 @@ class Formation_cars:
         car0_odom_name = yaml_params['car0_odom_name']
         car1_odom_name = yaml_params['car1_odom_name']
         car2_odom_name = yaml_params['car2_odom_name']
+        car3_odom_name = yaml_params['car3_odom_name']
         expect_formation_name = yaml_params['expect_formation_name']
         gridmap_name = yaml_params['gridmap_name']
         self.car0_odom = rospy.Subscriber(
@@ -50,6 +51,8 @@ class Formation_cars:
             car1_odom_name, Odometry, self.callback_car1)
         self.car2_odom = rospy.Subscriber(
             car2_odom_name, Odometry, self.callback_car2)
+        self.car2_odom = rospy.Subscriber(
+            car3_odom_name, Odometry, self.callback_car3)
         self.expect_formation = rospy.Subscriber(
             expect_formation_name, PointCloud, self.callback_expect_formation)
         self.gridmap_get = rospy.Subscriber(
@@ -77,7 +80,7 @@ class Formation_cars:
                     self.fc.pos[ind_c, 1] = self.pos_car[ind_c, 1]
                 print(self.fc.pos)
 
-                [t_get, trag_get] = self.fc.formation_cal()
+                [t_get, trag_get] = self.fc.formation_cal_allocate()
                 self.publish_pose(t_get, trag_get)
                 self.update_car = np.tile(False, [self.num_car])
 
@@ -163,6 +166,10 @@ class Formation_cars:
 
     def callback_car2(self, Odometry):
         ind_car = 2
+        self.store_car_pose(ind_car, Odometry)
+
+    def callback_car3(self, Odometry):
+        ind_car = 3
         self.store_car_pose(ind_car, Odometry)
 
     def store_car_pose(self, index_car, odo):
@@ -472,7 +479,7 @@ class formation:
         # print(pos)
         # plt.show()
 
-    def formation_cal(self):
+    def formation_cal_allocate(self):
         pos_save = np.zeros((0, self.pos_size, 2))
         pos_save_for = np.zeros((0, self.pos_size, 2))
         vel_save = np.zeros((0, self.pos_size, 2))
@@ -518,7 +525,7 @@ class formation:
 
             F_f = f_a
 
-            min_norm_thred = 0.2  # should be in front of min_norm = 4
+            min_norm_thred = 0.00001  # should be in front of min_norm = 4
             print('norm(F_f, 2)')
             print(np.linalg.norm(F_f, 2))
             if np.linalg.norm(F_f, 2) < min_norm_thred:
@@ -563,14 +570,84 @@ class formation:
                         file_dir = './tra_output/'
                         if not os.path.isdir(file_dir):
                             os.makedirs(file_dir)
-
-                        plt.savefig('./tra_output/image' + str(np.random.randint(1,
-                                    1000, [1], dtype=np.uint32)[0]) + '.png')
+                        dir_check = file_dir + "0000.png"
+                        for i_dir in range(0,10000):
+                            dir_check = file_dir + "image{0:04d}.png".format(i_dir+1)
+                            if os.path.exists(dir_check): 
+                                continue
+                            else:
+                                plt.savefig(dir_check)
+                                break
                     plt.pause(2.5)
                     plt.clf()
                     plt.close()
                 self.refresh_params()
                 return [t, pos_save]
+    
+    def for_fix_target(self, pos_save, shape_in):
+        car_final = pos_save[:, -1, :]
+        shape_points = np.block([[self.shape_in[:, 2:4]],[self.shape_in[:, 0:2]]])
+        dependent_points = np.array([shape_points[0][:]])
+        for ind_ang in range(1, shape_points.shape[0]):
+            check_point = shape_points[ind_ang][:]
+            flag_same = False
+            for ind_check in range(0,dependent_points.shape[0]):
+                if np.linalg.norm(dependent_points[ind_check][:] - check_point, 2) > 0:
+                    continue
+                else:
+                    flag_same = True
+            if not flag_same:
+                dependent_points = np.block([[dependent_points], [check_point]])
+        print('dependent_points:', dependent_points)
+
+        car_align = np.zeros(car_final.shape)
+        # car_final match with dependent_points 
+
+        # get closest ancle
+        distance_matrix = np.zeros([car_final.shape[1], dependent_points.shape[1]])
+        for ind_car in range(0, car_final.shape[1]):
+            for ind_dp in range(0, dependent_points.shape[1]):
+                distance_matrix[ind_car, ind_dp] = np.linalg.norm(dependent_points[ind_dp,:] - car_final[ind_car,:],2)
+        
+        distance_all = np.sum(np.sum(distance_matrix,1),0)
+        for ind_car in range(0, car_final.shape[1]):
+            if ind_car == dependent_points.shape[1]:
+                break
+            min_axis_0 = np.argmin(distance_matrix)/distance_matrix.shape[1] # car index
+            min_axis_1 = np.argmin(distance_matrix)%distance_matrix.shape[1] # ancle index
+            car_align[min_axis_0,:] = dependent_points[min_axis_1,:]
+            distance_matrix[min_axis_0, :] = distance_matrix[min_axis_0, :] + distance_all
+            distance_matrix[:, min_axis_1] = distance_matrix[:, min_axis_1] + distance_all
+        if car_final.shape[1] > dependent_points.shape[1]:
+            for ind_left in range(0, car_final.shape[1]):
+                if car_align[ind_left,0] == 0:
+                    pos_i = car_final[ind_left, :]
+                    tar_shape = self.shape_in
+                    diff_p_a = np.tile(pos_i, (tar_shape.shape[0], 2)) - tar_shape
+                    diff_p_a1 = diff_p_a[:, 0:2]
+                    diff_p_a2 = diff_p_a[:, 2:4]
+                    diff_a2_a1 = tar_shape[:, 2:4] - tar_shape[:, 0:2]
+                    proj_re = np.sum(diff_p_a1*diff_a2_a1, 1)
+                    len_proj_a1_pp = self.row_T(proj_re)/self.norm_row(diff_a2_a1)
+                    dir_a1_pp = diff_a2_a1 / \
+                        np.tile(self.norm_row(diff_a2_a1), (1, 2)) * \
+                        np.tile(len_proj_a1_pp, (1, 2))
+                    proj_p_pp = dir_a1_pp - diff_p_a1
+                    bool_is_acute = (np.tile(np.sum(diff_p_a1*diff_a2_a1, 1)
+                                            > 0, (2, 1)).T).astype(int)
+                    bool_isnot_acute = 1-bool_is_acute
+                    result_p_a1 = (bool_is_acute*proj_p_pp +
+                                bool_isnot_acute*(-diff_p_a1))
+
+                    bool_is_acute = (
+                        np.tile(np.sum(diff_p_a2*(-diff_a2_a1), 1) > 0, (2, 1)).T).astype(int)
+                    bool_isnot_acute = 1 - bool_is_acute
+                    result_pp = (bool_is_acute*result_p_a1 +
+                                bool_isnot_acute*(-diff_p_a2))
+                    ind = np.argmin(self.norm_row(result_pp))
+                    vec_i = result_pp[ind, :]
+                    project_result_pi = pos_i + vec_i
+                    car_align[ind_left][:] = project_result_pi
 
 
 if __name__ == '__main__':

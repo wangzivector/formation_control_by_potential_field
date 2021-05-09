@@ -1,7 +1,23 @@
 #!/usr/bin/env python
 import numpy as np
 
-m_gridmap = [[4, 4], [2, 3], [3, 4], [6, 7], [6, 5], [9, 8], [5, 6], [1, 7], [11, 7]]
+m_gridmap = [[4, 4], [2, 3], [3, 4], [6, 7], [6, 5], [9, 8], [5, 6], [1, 7]]
+
+shape_points = np.array(m_gridmap)
+# shape_points = np.block([[self.shape_in[:, 2:4]],[self.shape_in[:, 0:2]]])
+# dependent_point = np.array([shape_points[0][:]])
+# for ind_ang in range(1, shape_points.shape[0]):
+#     check_point = shape_points[ind_ang][:]
+#     flag_same = False
+#     for ind_check in range(0,dependent_point.shape[0]):
+#         if np.linalg.norm(dependent_point[ind_check][:] - check_point, 2) > 0:
+#             continue
+#         else:
+#             flag_same = True
+#     if not flag_same:
+#         dependent_point = np.block([[dependent_point], [check_point]])
+# print(dependent_point)
+exit()
 
 # start combining!!!
 arrange_s = list()
