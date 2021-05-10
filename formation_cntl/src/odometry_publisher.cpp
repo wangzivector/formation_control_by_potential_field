@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
       odo_index = random(10);
       switch (odo_index % 4) {
       case 0:
-        odom.pose.pose.position.x = x + 0.4 * random(8); // just random set
+        odom.pose.pose.position.x = x + 0.4 * random(5); // just random set
         odom.pose.pose.position.y =
             y + 0.3 * random(8); // x and y have no meaning
         odom_pub0.publish(odom);
@@ -82,13 +82,13 @@ int main(int argc, char **argv) {
         odom_pub1.publish(odom);
         break;
       case 2:
-        odom.pose.pose.position.x = x + 0.5 * random(8);
-        odom.pose.pose.position.y = y + 0.1 * random(8);
+        odom.pose.pose.position.x = x + 0.5 * random(4);
+        odom.pose.pose.position.y = y + 0.1 * random(3);
         odom_pub2.publish(odom);
         break;
       case 3:
-        odom.pose.pose.position.x = x + 0.5 * random(7);
-        odom.pose.pose.position.y = y + 0.1 * random(6);
+        odom.pose.pose.position.x = x + 0.5 * random(2);
+        odom.pose.pose.position.y = y + 0.1 * random(4);
         odom_pub3.publish(odom);
         break;
       }
@@ -208,6 +208,7 @@ int main(int argc, char **argv) {
       // here is your difinition of formation
       int num_lines = 4;
       float formation[num_lines][4] = {{1, 2, 4, 2},{1, 2, 1, 4},{1, 4, 4, 4},{4, 4, 4, 2}}; // line
+      // float formation[num_lines][4] = {{1, 2, 10, 2}}; // line
 
       // float formation[3][4] = {
       //     {2, 3, 4, 3}, {2, 3, 3, 1.5}, {3, 1.5, 4, 3}}; // triangle
