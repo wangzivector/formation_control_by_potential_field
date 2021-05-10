@@ -1,5 +1,5 @@
 # topics params
-num_car: 3 # num of cars
+num_car: 4 # num of cars
 path_name: /path
 car0_odom_name: /car0/odom
 car1_odom_name: /car1/odom
@@ -9,7 +9,7 @@ expect_formation_name: /expect_formation
 gridmap_name: /gridmap
 
 # mode params
-is_obstacle: false
+is_obstacle: true
 show_img: true
 save_img: true # default save dir: home/tra_output
 select_pose: true
@@ -26,8 +26,8 @@ D_d: 1
 k_k: 9
 
 # algorithms params
-kr: 2   # for_repulsive
-ks: 100   # for_spherical/for_shape
-ko: 2    # for_obstacle
-distance_limit: 0.5
-min_norm_thred: 0.001
+kr: 1   # for_repulsive
+ks: 50   # for_spherical/for_shape
+ko: 1    # for_obstacle
+distance_limit: 0.2
+min_norm_thred: 0.00001

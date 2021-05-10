@@ -304,7 +304,7 @@ class formation:
         distance_sq_inv[np.isinf(distance_sq_inv)] = 0
         distance_n = distance_sq**(0.5)
 
-        print('distance_n:',distance_n)
+        # print('distance_n:',distance_n)
         
         if distance_limit_flag:
             distance_n[distance_n > self.distance_limit] = 0
@@ -418,13 +418,13 @@ class formation:
                 np.tile(bool_bi, [1, 2])
 
             F_o_i = dir * np.tile(vel_norm, [1, 2]) * factors * self.ko
-            print('F_o_i')
-            print(F_o_i)
+            # print('F_o_i')
+            # print(F_o_i)
             F_o = F_o + F_o_i
             # you can cosider sum them up or just choose the biggest one.
         return F_o
 
-    def formation_shape(self, sha_ind):
+    def formation_shape(self, sha_ind): ## no use anymore
         if sha_ind == 0:
             shape_i = np.array([[-1, 0, 1, 0], [-1, 0, 0, -1.5],
                                 [0, -1.5, 1, 0]])  # triangle
@@ -536,9 +536,10 @@ class formation:
             f_a = self.boundary_force([F_r, f_s])
 
             # mute obstcle force here if you want
-            if self.bool_obstacle:
-                f_o = self.for_obstacle(self.cen_o, self.rect_o, self.pos, f_a)
-                f_a = f_a + f_o
+
+            # if self.bool_obstacle:
+            #     f_o = self.for_obstacle(self.cen_o, self.rect_o, self.pos, f_a)
+                # f_a = f_a + f_o
 
             F_f = f_a
 
@@ -573,7 +574,6 @@ class formation:
             # print(vel)
 
             # plot the result in matplot
-            # self.formation_plot( pos_save, pos_save_for)
             if self.shape_ind == 1 or index_t == self.time_stamp[-1]:
                 if index_t == self.time_stamp[-1]:
                     pos_save_for = np.append(pos_save_for, pos_f.reshape(
@@ -582,8 +582,10 @@ class formation:
                     [t, pos_save] = self.select_pose(pos_save)
                 else:
                     t = np.array(self.time_stamp[0:(pos_save.shape[0])])*(1000)
-                if self.show_img:
-                    self.formation_plot(pos_save, pos_save_for)
+
+                # if self.show_img:
+                #     self.formation_plot(pos_save, pos_save_for)
+                    
                     # if self.save_img:
                     #     file_dir = './tra_output/'
                     #     if not os.path.isdir(file_dir):
@@ -644,7 +646,7 @@ class formation:
                             :] = distance_matrix[min_axis_0, :] + distance_all
             distance_matrix[:, min_axis_1] = distance_matrix[:,
                                                              min_axis_1] + distance_all
-        print('car_align',car_align)
+        # print('car_align',car_align)
         if car_final.shape[0] > dependent_points.shape[0]:
             for ind_left in range(0, car_final.shape[0]):
                 if np.isnan(car_align[ind_left, 0]):
@@ -682,11 +684,11 @@ class formation:
 
                     if bool_is_acute_1[ind][0] == 0 or bool_is_acute_2[ind][0] == 0:
                         car_align[ind_left][:] = np.array([np.nan, np.nan])
-        print("orign:", car_final, "reassign to :", car_align)
+        # print("orign:", car_final, "reassign to :", car_align)
         return [car_final, car_align]
 
     def for_point2point(self, pos_in, pos_final):
-        print("pos_in, pos_final",pos_in, pos_final)
+        # print("pos_in, pos_final",pos_in, pos_final)
         pos_final_temp = pos_final.copy()
         is_not_anchor = np.isnan(pos_final)
         pos_final_temp[is_not_anchor] = 0
@@ -712,8 +714,8 @@ class formation:
         for index_t in self.time_stamp:
             F_r = self.for_repulsive(self.pos, True)
             f_s = self.for_point2point(self.pos, car_align)
-            print("F_r,f_s", F_r,f_s)
-            f_a = self.boundary_force([F_r, f_s]) 
+            # print("F_r,f_s", F_r,f_s)
+            f_a = self.boundary_force([F_r, f_s])
             if self.bool_obstacle:
                 f_o = self.for_obstacle(self.cen_o, self.rect_o, self.pos, f_a)
                 f_a = f_a + f_o
@@ -748,7 +750,8 @@ class formation:
                 if self.select_pose_flag:
                     [t, pos_save] = self.select_pose(pos_save)
                 else:
-                    t = np.array(self.time_stamp[0:(pos_save.shape[0])])*(1000)
+                    t = np.array(self.time_stamp[0:(pos_save.shape[0])])*(1000) # unit is ms
+                
                 if self.show_img:
                     self.formation_plot(pos_save, pos_save_for)
                     if self.save_img:
@@ -763,6 +766,7 @@ class formation:
                                 continue
                             else:
                                 plt.savefig(dir_check)
+                                print(dir_check, 'saved')
                                 break
                     plt.pause(1.5)
                     plt.clf()

@@ -108,8 +108,8 @@ int main(int argc, char **argv) {
 
       // left_up position and right_down position of rect obstacle
       int obstacle_num = 2;
-      float obstacle_list[obstacle_num][4] = {{1.0, 1.0, 3.0, 1.5},
-                                              {2.8, 3, 3.9, 4.4}};
+      float obstacle_list[obstacle_num][4] = {{1.0, 1.0, 2.0, 1.5},
+                                              {3.5, 3, 3.9, 3.4}};
       // int obstacle_num = 1;
       // float obstacle_list[obstacle_num][4] = {{1, 1, 1.2, 1.4}};
       // std::cout << int((obstacle_list[0][1] + 0.5*m_resolution) /
@@ -206,9 +206,9 @@ int main(int argc, char **argv) {
 
       // formation type : formation_x[num_line][x_y_index]
       // here is your difinition of formation
-      int num_lines = 4;
-      float formation[num_lines][4] = {{1, 2, 4, 2},{1, 2, 1, 4},{1, 4, 4, 4},{4, 4, 4, 2}}; // line
-      // float formation[num_lines][4] = {{1, 2, 10, 2}}; // line
+      int num_lines = 1;
+      // float formation[num_lines][4] = {{1, 2, 4, 2},{1, 2, 1, 4},{1, 4, 4, 4},{4, 4, 4, 2}}; // line
+      float formation[num_lines][4] = {{1, 2, 3, 2}}; // line
 
       // float formation[3][4] = {
       //     {2, 3, 4, 3}, {2, 3, 3, 1.5}, {3, 1.5, 4, 3}}; // triangle
