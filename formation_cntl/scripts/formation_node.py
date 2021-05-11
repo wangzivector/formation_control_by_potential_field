@@ -236,6 +236,9 @@ class formation:
         self.ko = yaml_params['ko']
         self.distance_limit = yaml_params['distance_limit']
         self.min_norm_thred = yaml_params['min_norm_thred']
+        self.add_barr = yaml_params['add_barr'] # add some m to avoid the obstacle.
+        self.barrier = yaml_params['barrier'] # or add threshold.
+
 
         # self.F_last_last = 0.1
         # self.F_last = 0.2
@@ -371,8 +374,8 @@ class formation:
         return f_n
 
     def for_obstacle(self, cen_o, rect_o, pos, vel):
-        add_barr = 0  # add some m to avoid the obstacle.
-        barrier = 3  # or add threshold.
+        # self.add_barr = 0  # add some m to avoid the obstacle.
+        # self.barrier = 3  # or add threshold.
 
         F_o = np.zeros(np.shape(pos))
         # print(cen_o.shape[1])
@@ -387,14 +390,14 @@ class formation:
             v2 = rect_o[index_o, 1]
             x = self.row_T(pos[:, 0])
             y = self.row_T(pos[:, 1])
-            A_sq = 1/(2*((v1+add_barr)**2))
-            B_sq = 1/(2*((v2+add_barr)**2))
+            A_sq = 1/(2*((v1+self.add_barr)**2))
+            B_sq = 1/(2*((v2+self.add_barr)**2))
             B_b = B_sq**(0.5)
             A_a = A_sq**(0.5)
-            need_avoid = (((x-x0)**2)*(A_sq)+((y-y0)**2)*(B_sq)) < barrier
+            need_avoid = (((x-x0)**2)*(A_sq)+((y-y0)**2)*(B_sq)) < self.barrier
             dis2ob = np.abs((((x-x0)**2)*(A_sq)+((y-y0)**2)*(B_sq))-1)
             dis2ob[dis2ob == 0] = 0.0001
-            dis2ob_inv = dis2ob**(-1) - 1/barrier
+            dis2ob_inv = dis2ob**(-1) - 1/self.barrier
             inv_factor = dis2ob**(-2)*5
             f_cw = np.block([- (B_b)*(y - y0), (A_a)*(x - x0)])
             f_ccw = np.block([(B_b)*(y - y0), -(A_a)*(x - x0)])
@@ -461,7 +464,7 @@ class formation:
 
         return [t_select, pos_select]
 
-    def boundary_force(self, F_in):
+    def force_boundary(self, F_in):
         [F_r, f_s] = F_in
         Fr_max = self.max_F
         norm_F = self.norm_row(F_r)
@@ -533,7 +536,7 @@ class formation:
 
             # print(F_r)
             # print(f_s)
-            f_a = self.boundary_force([F_r, f_s])
+            f_a = self.force_boundary([F_r, f_s])
 
             # mute obstcle force here if you want
 
@@ -715,7 +718,7 @@ class formation:
             F_r = self.for_repulsive(self.pos, True)
             f_s = self.for_point2point(self.pos, car_align)
             # print("F_r,f_s", F_r,f_s)
-            f_a = self.boundary_force([F_r, f_s])
+            f_a = self.force_boundary([F_r, f_s])
             if self.bool_obstacle:
                 f_o = self.for_obstacle(self.cen_o, self.rect_o, self.pos, f_a)
                 f_a = f_a + f_o

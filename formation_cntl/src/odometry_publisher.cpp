@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
       // here is your difinition of formation
       int num_lines = 1;
       // float formation[num_lines][4] = {{1, 2, 4, 2},{1, 2, 1, 4},{1, 4, 4, 4},{4, 4, 4, 2}}; // line
-      float formation[num_lines][4] = {{1, 2, 3, 2}}; // line
+      float formation[num_lines][4] = {{1, 2.5, 3, 2.5}}; // line
 
       // float formation[3][4] = {
       //     {2, 3, 4, 3}, {2, 3, 3, 1.5}, {3, 1.5, 4, 3}}; // triangle

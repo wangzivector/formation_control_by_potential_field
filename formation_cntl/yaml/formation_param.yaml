@@ -31,3 +31,5 @@ ks: 50   # for_spherical/for_shape
 ko: 1    # for_obstacle
 distance_limit: 0.2
 min_norm_thred: 0.00001
+add_barr: 0.2
+barrier: 2
