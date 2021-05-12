@@ -8,7 +8,7 @@ import numpy as np
 import os
 import sys
 import matplotlib.pyplot as plt
-from numpy.lib.function_base import _interp_dispatcher
+# from numpy.lib.function_base import _interp_dispatcher
 import yaml
 
 import rospy
@@ -586,25 +586,25 @@ class formation:
                 else:
                     t = np.array(self.time_stamp[0:(pos_save.shape[0])])*(1000)
 
-                # if self.show_img:
-                #     self.formation_plot(pos_save, pos_save_for)
+                if self.show_img:
+                    self.formation_plot(pos_save, pos_save_for)
                     
-                    # if self.save_img:
-                    #     file_dir = './tra_output/'
-                    #     if not os.path.isdir(file_dir):
-                    #         os.makedirs(file_dir)
-                    #     dir_check = file_dir + "image0000.png"
-                    #     for i_dir in range(0, 10000):
-                    #         dir_check = file_dir + \
-                    #             "image{0:04d}.png".format(i_dir+1)
-                    #         if os.path.exists(dir_check):
-                    #             continue
-                    #         else:
-                    #             plt.savefig(dir_check)
-                    #             break
-                    # plt.pause(1.5)
-                    # plt.clf()
-                    # plt.close()
+                    if self.save_img:
+                        file_dir = './tra_output/'
+                        if not os.path.isdir(file_dir):
+                            os.makedirs(file_dir)
+                        dir_check = file_dir + "image0000.png"
+                        for i_dir in range(0, 10000):
+                            dir_check = file_dir + \
+                                "image{0:04d}.png".format(i_dir+1)
+                            if os.path.exists(dir_check):
+                                continue
+                            else:
+                                plt.savefig(dir_check)
+                                break
+                    plt.pause(1.5)
+                    plt.clf()
+                    plt.close()
                 self.refresh_params()
                 return [t, pos_save]
 
