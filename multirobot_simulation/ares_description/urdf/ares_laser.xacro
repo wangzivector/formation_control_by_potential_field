@@ -27,7 +27,7 @@
     <joint name="imu_sensor_joint" type="fixed">
         <origin xyz="${camera_offset_x} ${camera_offset_y} ${camera_offset_z}" rpy="0 0 0" />
         <parent link="base_link"/>
-        <child link="imu_sensor_link"/>
+        <child link="imu_sensor_link"/>`
     </joint>
 	
     <xacro:imu_sensor prefix="imu_sensor"/>

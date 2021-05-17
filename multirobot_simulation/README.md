@@ -1,11 +1,11 @@
-## this is modification of ares_multirobots and aws-robomaker-hospital-world, which are modified for multirobot system simulation, including Formation Control, VINS, Sensor Fusion and so on. detialed of original projects see the reference.  
+* this is modification of ares_multirobots and aws-robomaker-hospital-world, which are modified for multirobot system simulation, including Formation Control, VINS, Sensor Fusion and so on. detialed of original projects see the reference.  
 
-# Steps for Start up
+# Start up
 ```bash
  # load world and three robots
  roslaunch ares_gazebo world_robots_gazebo.launch 
  # control command motivate car // can be written into launch
- rosrun ares_teleop ares_teleop.py ns:=ares1 
+ rosrun ares_teleop ares_teleop.py __ns:=ares1 
  
 ```
 
@@ -27,3 +27,7 @@ car models and simple control nodes are reference here.
 simulation world is reference here.
 [github](https://github.com/aws-robotics/aws-robomaker-hospital-world)
 * you need download gazebo official models lib and referenced models detailed in this project's file 'setup.py'. Also most likely you need to fix the url problem arised when loading world. 
+
+### XTDrone
+UAV Simulation Platform based on PX4, ROS and Gazebo
+[github](https://github.com/robin-shaun/xtdrone)

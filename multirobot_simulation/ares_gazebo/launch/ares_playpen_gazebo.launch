@@ -19,7 +19,7 @@
     </include>
 
     <!-- 加载机器人模型描述参数 -->
-    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ares_description)/urdf/ares_laser.xacro'" /> 
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ares_description)/urdf/ares_laser.xacro' bodyframe:=ares1 ns:=ares1" /> 
 
     <!-- 运行joint_state_publisher节点，发布机器人的关节状态  -->
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" ></node> 
